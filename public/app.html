@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEAD MKT — Dashboard</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a1a">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f7f5;--surface:#fff;--border:#e2e2e0;--text:#1a1a1a;--muted:#737373;
+  --accent:#1a1a1a;--al:#f0f0ee;--green:#16a34a;--red:#dc2626;--blue:#2563eb;
+  --yellow:#d97706;--radius:6px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+[data-theme=dark]{
+  --bg:#111;--surface:#1c1c1c;--border:#2a2a2a;--text:#f0f0f0;--muted:#888;--accent:#f0f0f0;--al:#252525;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+.app{display:flex;flex-direction:column;min-height:100vh}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+nav{display:flex;gap:1px}
+nav button{background:none;border:none;padding:6px 12px;border-radius:var(--radius);font-size:13px;font-family:var(--font);cursor:pointer;color:var(--muted);transition:all .1s}
+nav button:hover{background:var(--al);color:var(--text)}
+nav button.active{background:var(--accent);color:var(--bg)}
+.header-right{display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--border);cursor:pointer;object-fit:cover;border:2px solid var(--border);transition:border-color .15s}
+.avatar:hover{border-color:var(--accent)}
+.avatar-placeholder{width:32px;height:32px;border-radius:50%;background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+.notif-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;padding:4px;border-radius:var(--radius);transition:color .15s}
+.notif-btn:hover{color:var(--text)}
+
+main{flex:1;padding:28px;max-width:1200px;width:100%;margin:0 auto}
+.section{display:none}.section.active{display:block}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.section-title{font-size:16px;font-weight:700}
+.section-meta{font-size:12px;color:var(--muted)}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);font-size:13px;font-family:var(--font);cursor:pointer;border:1px solid transparent;font-weight:600;transition:all .1s}
+.btn-primary{background:var(--accent);color:var(--bg)}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:none;color:var(--text);border-color:var(--border)}
+.btn-ghost:hover{background:var(--al)}
+.btn-danger{background:none;color:var(--red);border:none;padding:4px 8px;font-size:12px;cursor:pointer;border-radius:var(--radius)}
+.btn-danger:hover{background:#fee2e2}
+.btn-icon{background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:var(--radius);color:var(--muted);font-size:14px}
+.btn-icon:hover{background:var(--al);color:var(--text)}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
+table{width:100%;border-collapse:collapse;background:var(--surface)}
+thead{background:var(--bg)}
+th{text-align:left;padding:9px 13px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 13px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--al)}
+.empty-state{text-align:center;padding:48px 24px;color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+
+/* BADGE */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.bg{background:#dcfce7;color:#166534}.by{background:#fef9c3;color:#854d0e}
+.br{background:#fee2e2;color:#991b1b}.bb{background:#dbeafe;color:#1e40af}
+.bz{background:#f4f4f4;color:#525252}.bo{background:#ffedd5;color:#9a3412}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:10px;padding:28px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.18)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:20px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:24px}
+.fg{display:grid;gap:14px}.fg2{grid-template-columns:1fr 1fr}
+.ff{display:flex;flex-direction:column;gap:5px}
+.ff label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.ff input,.ff select,.ff textarea{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);color:var(--text);background:var(--bg);outline:none;transition:border-color .15s}
+.ff input:focus,.ff select:focus,.ff textarea:focus{border-color:var(--accent)}
+.ff textarea{resize:vertical;min-height:80px}
+
+/* FILTER */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar select,.filter-bar input{padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;font-family:var(--font);background:var(--surface);outline:none;color:var(--text)}
+
+/* METRICS */
+.met-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:12px;margin-bottom:24px}
+.met-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.met-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;margin-bottom:4px}
+.met-val{font-size:28px;font-weight:800;line-height:1.1}
+.met-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* TASKS */
+.task-item{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);background:var(--surface)}
+.task-item:last-child{border-bottom:none}
+.task-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;margin-top:2px}
+.task-content{flex:1}
+.task-title{font-size:13px}
+.task-title.done{text-decoration:line-through;color:var(--muted)}
+.task-meta{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* PIPELINE STAGES */
+.pipe-stages{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px}
+.pipe-stage{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center}
+.ps-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.ps-count{font-size:22px;font-weight:800;margin-top:4px}
+
+/* CALENDAR */
+.cal-week{display:grid;grid-template-columns:70px repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px}
+.cal-cell{background:var(--surface);padding:7px;min-height:80px;font-size:12px}
+.cal-cell.hdr{background:var(--bg);min-height:auto;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center}
+.cal-plat{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;justify-content:center;min-height:80px}
+.cal-item{background:var(--al);border-left:2px solid var(--accent);padding:2px 5px;border-radius:3px;margin-bottom:2px;font-size:10px;cursor:pointer}
+.cal-add{width:100%;background:none;border:1px dashed var(--border);border-radius:3px;padding:2px;font-size:10px;cursor:pointer;color:var(--muted);margin-top:2px}
+.cal-add:hover{border-color:var(--accent);color:var(--accent)}
+
+/* NOTES */
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.note-card{border:1px solid var(--border);border-radius:var(--radius);padding:16px;background:var(--surface);cursor:pointer;transition:border-color .15s;position:relative}
+.note-card:hover{border-color:#bbb}
+.note-card.pinned{border-top:3px solid var(--accent)}
+.note-title{font-size:14px;font-weight:700;margin-bottom:6px}
+.note-preview{font-size:12px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.note-date{font-size:11px;color:var(--muted);margin-top:8px}
+
+/* NEWS */
+.news-topics{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.ntb{padding:6px 16px;border-radius:20px;font-size:12px;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-weight:600;transition:all .15s}
+.ntb:hover{border-color:var(--accent)}
+.ntb.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.news-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:7px}
+.news-source{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.news-title{font-size:13px;font-weight:700;line-height:1.4;color:var(--text);text-decoration:none}
+.news-title:hover{text-decoration:underline}
+.news-desc{font-size:12px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.news-date{font-size:11px;color:var(--muted)}
+.loading{text-align:center;padding:48px;color:var(--muted);font-size:13px}
+
+/* SETTINGS PANEL */
+.settings-panel{position:fixed;right:0;top:0;bottom:0;width:320px;background:var(--surface);border-left:1px solid var(--border);z-index:300;transform:translateX(100%);transition:transform .25s;padding:24px;overflow-y:auto}
+.settings-panel.open{transform:translateX(0)}
+.settings-close{position:absolute;top:16px;right:16px;background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted)}
+.settings-avatar{display:flex;flex-direction:column;align-items:center;gap:12px;margin:24px 0}
+.avatar-big{width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--border)}
+.avatar-big-placeholder{width:72px;height:72px;border-radius:50%;background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700}
+.settings-section{margin-bottom:24px}
+.settings-section h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px}
+.theme-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.theme-btn{padding:10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;font-family:var(--font);font-weight:600;background:var(--surface);color:var(--text);text-align:center}
+.theme-btn.active{border-color:var(--accent);background:var(--accent);color:var(--bg)}
+
+/* PAYWALL */
+.paywall{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:48px;text-align:center;max-width:480px;margin:60px auto}
+.paywall h2{font-size:24px;font-weight:800;margin-bottom:12px}
+.paywall p{color:var(--muted);font-size:14px;margin-bottom:28px}
+
+/* TABS SECONDARY */
+.tabs2{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.tabs2 button{background:none;border:none;padding:8px 14px;font-size:13px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--font);font-weight:600;transition:color .1s}
+.tabs2 button.active{color:var(--text);border-bottom-color:var(--accent)}
+.subtab{display:none}.subtab.active{display:block}
+
+hr{border:none;border-top:1px solid var(--border);margin:24px 0}
+
+/* IMPORT */
+.import-drop{border:2px dashed var(--border);border-radius:var(--radius);padding:28px;text-align:center;cursor:pointer;background:var(--bg)}
+.import-drop:hover{border-color:var(--accent)}
+.import-drop p{font-size:12px;color:var(--muted);margin-top:6px}
+
+@media(max-width:768px){
+  main{padding:16px}
+  header{padding:0 16px}
+  nav button{padding:6px 8px;font-size:11px}
+  .pipe-stages{grid-template-columns:repeat(3,1fr)}
+  .fg2{grid-template-columns:1fr}
+  .news-grid{grid-template-columns:1fr}
+  .settings-panel{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo">HEAD MKT</div>
+  <nav id="main-nav">
+    <button class="active" onclick="showTab('crm',this)">CRM</button>
+    <button onclick="showTab('pipeline',this)">Pipeline</button>
+    <button onclick="showTab('calendario',this)">Calendário</button>
+    <button onclick="showTab('metricas',this)">Métricas</button>
+    <button onclick="showTab('carreira',this)">Carreira</button>
+    <button onclick="showTab('tarefas',this)">Tarefas</button>
+    <button onclick="showTab('notas',this)">Notas</button>
+    <button onclick="showTab('noticias',this)">Notícias</button>
+  </nav>
+  <div class="header-right">
+    <button class="notif-btn" id="notif-btn" onclick="requestNotifications()" title="Ativar notificações">🔔</button>
+    <div id="avatar-container" onclick="openSettings()"></div>
+  </div>
+</header>
+
+<main>
+
+<!-- CRM -->
+<section id="crm" class="section active">
+  <div class="section-header">
+    <div><div class="section-title">CRM de Leads</div><div class="section-meta" id="crm-count"></div></div>
+    <div class="btn-group">
+      <button class="btn btn-ghost" onclick="openOverlay('ov-import')">↑ Importar CSV</button>
+      <button class="btn btn-ghost" onclick="exportLeads()">↓ Exportar</button>
+      <button class="btn btn-primary" onclick="openOverlay('ov-lead')">+ Novo lead</button>
+    </div>
+  </div>
+  <div class="filter-bar">
+    <select id="f-temp" onchange="renderCRM()"><option value="">Temperatura</option><option>Quente</option><option>Morno</option><option>Frio</option></select>
+    <select id="f-status" onchange="renderCRM()"><option value="">Status</option><option>Novo</option><option>Em contato</option><option>Agendado</option><option>Proposta</option><option>Fechado</option><option>Perdido</option></select>
+    <input id="f-search" type="text" placeholder="Buscar nome..." oninput="renderCRM()" style="width:160px">
+  </div>
+  <div class="table-wrap" id="crm-wrap">
+    <table><thead><tr><th>Nome</th><th>WhatsApp</th><th>Origem</th><th>Interesse</th><th>Temperatura</th><th>Status</th><th>Próxima ação</th><th>Data</th><th></th></tr></thead>
+    <tbody id="crm-body"></tbody></table>
+  </div>
+  <div id="crm-empty" class="empty-state" style="display:none">Nenhum lead. Clique em "+ Novo lead" para começar.</div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Pipeline de Produção</div><div class="section-meta" id="pipe-count"></div></div>
+    <button class="btn btn-primary" onclick="openOverlay('ov-pipe')">+ Novo conteúdo</button>
+  </div>
+  <div class="pipe-stages" id="pipe-stages"></div>
+  <div class="filter-bar">
+    <select id="f-etapa" onchange="renderPipe()"><option value="">Etapa</option><option>Ideia</option><option>Copy</option><option>Produção</option><option>Edição</option><option>Publicado</option></select>
+    <select id="f-plat" onchange="renderPipe()"><option value="">Plataforma</option><option>Instagram</option><option>TikTok</option><option>LinkedIn</option><option>YouTube</option><option>Podcast</option><option>Newsletter</option></select>
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr><th>Título</th><th>Formato</th><th>Plataforma</th><th>Etapa</th><th>Responsável</th><th>Prazo</th><th></th></tr></thead>
+    <tbody id="pipe-body"></tbody></table>
+  </div>
+  <div id="pipe-empty" class="empty-state" style="display:none">Nenhum conteúdo no pipeline.</div>
+</section>
+
+<!-- CALENDÁRIO -->
+<section id="calendario" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Calendário Editorial</div><div class="section-meta" id="cal-label"></div></div>
+    <div class="btn-group">
+      <button class="btn btn-ghost" onclick="changeWeek(-1)">← Anterior</button>
+      <button class="btn btn-ghost" onclick="changeWeek(0)">Hoje</button>
+      <button class="btn btn-ghost" onclick="changeWeek(1)">Próxima →</button>
+    </div>
+  </div>
+  <div id="cal-grid"></div>
+  <div class="table-wrap" style="margin-top:20px">
+    <table><thead><tr><th>Título</th><th>Plataforma</th><th>Formato</th><th>Data</th><th>Status</th><th></th></tr></thead>
+    <tbody id="cal-list"></tbody></table>
+  </div>
+  <div id="cal-empty" class="empty-state" style="display:none;margin-top:12px">Nenhum conteúdo esta semana.</div>
+</section>
+
+<!-- MÉTRICAS -->
+<section id="metricas" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Métricas</div><div class="section-meta" id="met-period"></div></div>
+    <button class="btn btn-primary" onclick="openOverlay('ov-met')">+ Registrar mês</button>
+  </div>
+  <div class="met-grid" id="met-cards"></div>
+  <div class="table-wrap">
+    <table><thead><tr><th>Período</th><th>IG HEAD</th><th>IG Pessoal</th><th>LinkedIn</th><th>TikTok</th><th>YouTube</th><th>Alcance</th><th></th></tr></thead>
+    <tbody id="met-body"></tbody></table>
+  </div>
+  <div id="met-empty" class="empty-state" style="display:none">Nenhum registro.</div>
+</section>
+
+<!-- CARREIRA -->
+<section id="carreira" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Plano de Carreira</div></div>
+    <button class="btn btn-primary" onclick="openOverlay('ov-car')">+ Novo projeto</button>
+  </div>
+  <div class="tabs2">
+    <button class="active" onclick="showSub('car-proj',this)">Projetos</button>
+    <button onclick="showSub('car-metas',this)">Metas</button>
+    <button onclick="showSub('car-notas',this)">Notas estratégicas</button>
+  </div>
+  <div id="car-proj" class="subtab active">
+    <div class="table-wrap">
+      <table><thead><tr><th>Projeto</th><th>Categoria</th><th>Receita est.</th><th>Status</th><th>Próxima ação</th><th>Prazo</th><th></th></tr></thead>
+      <tbody id="car-body"></tbody></table>
+    </div>
+    <div id="car-empty" class="empty-state" style="display:none">Nenhum projeto registrado.</div>
+  </div>
+  <div id="car-metas" class="subtab">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Meta</th><th>Prazo</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Gravar aula piloto do curso</td><td>Jul/2026</td><td><span class="badge by">Pendente</span></td></tr>
+        <tr><td>Lançar mentoria (5 vagas)</td><td>Ago/2026</td><td><span class="badge by">Pendente</span></td></tr>
+        <tr><td>Chegar a 1k seguidores qualificados</td><td>Set/2026</td><td><span class="badge by">Pendente</span></td></tr>
+        <tr><td>Lançar curso online</td><td>Set/2026</td><td><span class="badge by">Pendente</span></td></tr>
+        <tr><td>Primeira receita fora da imobiliária</td><td>Ago/2026</td><td><span class="badge by">Pendente</span></td></tr>
+      </tbody>
+    </table></div>
+    <div style="margin-top:20px" class="table-wrap"><table>
+      <thead><tr><th>Período</th><th>Marco</th></tr></thead>
+      <tbody>
+        <tr><td>Mai–Jun 2026</td><td>Construir marca pessoal: 4 posts/semana sobre mkt imobiliário + IA</td></tr>
+        <tr><td>Jul 2026</td><td>Gravar aula piloto e testar com beta-testers</td></tr>
+        <tr><td>Ago 2026</td><td>Lançar mentoria em grupo (5 vagas)</td></tr>
+        <tr><td>Set 2026</td><td>Lançar curso online para lista de espera</td></tr>
+        <tr><td>Out–Dez 2026</td><td>Escalar: podcast + newsletter paga + próxima turma</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div id="car-notas" class="subtab">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+      <textarea id="car-notas-txt" style="width:100%;border:none;background:none;font-family:var(--font);font-size:13px;line-height:1.7;outline:none;resize:none;min-height:300px;color:var(--text)" placeholder="Anotações estratégicas para o seu plano de carreira..."></textarea>
+    </div>
+    <div style="text-align:right;margin-top:8px">
+      <button class="btn btn-ghost" onclick="saveCarNotes()">Salvar notas</button>
+    </div>
+  </div>
+</section>
+
+<!-- TAREFAS -->
+<section id="tarefas" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Tarefas</div><div class="section-meta" id="task-count"></div></div>
+    <button class="btn btn-primary" onclick="openOverlay('ov-task')">+ Nova tarefa</button>
+  </div>
+  <div class="filter-bar">
+    <select id="f-prio" onchange="renderTasks()"><option value="">Prioridade</option><option>Alta</option><option>Média</option><option>Baixa</option></select>
+    <select id="f-area" onchange="renderTasks()"><option value="">Área</option><option>HEAD IMOB</option><option>Pessoal</option><option>Carreira</option></select>
+  </div>
+  <div id="task-list" style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden"></div>
+  <div id="task-empty" class="empty-state" style="display:none">Nenhuma tarefa pendente.</div>
+  <hr>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="font-size:13px;font-weight:700">Concluídas</div>
+    <button class="btn btn-danger" onclick="clearDone()">Limpar</button>
+  </div>
+  <div id="done-list" style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden"></div>
+  <div id="done-empty" class="empty-state" style="display:none">Nenhuma tarefa concluída.</div>
+</section>
+
+<!-- NOTAS -->
+<section id="notas" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Notas</div></div>
+    <button class="btn btn-primary" onclick="openOverlay('ov-note')">+ Nova nota</button>
+  </div>
+  <div class="notes-grid" id="notes-grid"></div>
+  <div id="notes-empty" class="empty-state" style="display:none">Nenhuma nota ainda.</div>
+</section>
+
+<!-- NOTÍCIAS -->
+<section id="noticias" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Notícias do Mercado</div><div class="section-meta" id="news-meta"></div></div>
+    <button class="btn btn-ghost" onclick="loadNews(currentTopic)">↻ Atualizar</button>
+  </div>
+  <div class="news-topics">
+    <button class="ntb active" onclick="switchNews('imobiliario',this)">Imobiliário</button>
+    <button class="ntb" onclick="switchNews('tecnologia',this)">Tecnologia</button>
+    <button class="ntb" onclick="switchNews('inovacao',this)">Inovação</button>
+    <button class="ntb" onclick="switchNews('wellness',this)">Wellness</button>
+    <button class="ntb" onclick="switchNews('nova-geracao',this)">Nova Geração</button>
+    <button class="ntb" onclick="switchNews('ia-marketing',this)">IA & Marketing</button>
+  </div>
+  <div id="news-container"><div class="loading">Carregando notícias...</div></div>
+</section>
+
+</main>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-panel" id="settings-panel">
+  <button class="settings-close" onclick="closeSettings()">✕</button>
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:4px">Configurações</h3>
+  <div class="settings-avatar">
+    <div id="settings-avatar-display"></div>
+    <div>
+      <div id="settings-name" style="font-weight:700;text-align:center"></div>
+      <div id="settings-email" style="font-size:12px;color:var(--muted);text-align:center"></div>
+    </div>
+    <label class="btn btn-ghost" style="cursor:pointer;font-size:12px">
+      Trocar foto
+      <input type="file" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+    </label>
+  </div>
+  <div class="settings-section">
+    <h4>Nome de exibição</h4>
+    <div class="fg">
+      <div class="ff"><input id="settings-name-input" type="text" placeholder="Seu nome"></div>
+      <button class="btn btn-ghost" onclick="updateName()">Salvar</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h4>Tema</h4>
+    <div class="theme-btns">
+      <button class="theme-btn active" id="theme-light" onclick="setTheme('light')">Claro</button>
+      <button class="theme-btn" id="theme-dark" onclick="setTheme('dark')">Escuro</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h4>Notificações</h4>
+    <button class="btn btn-ghost" style="width:100%" onclick="requestNotifications()">Ativar notificações</button>
+  </div>
+  <hr>
+  <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="doLogout()">Sair da conta</button>
+</div>
+<div id="settings-overlay" onclick="closeSettings()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:299"></div>
+
+<!-- OVERLAYS / MODALS -->
+
+<!-- Lead -->
+<div class="overlay" id="ov-lead">
+  <div class="modal">
+    <h3 id="lead-modal-title">Novo Lead</h3>
+    <input type="hidden" id="edit-lead-id">
+    <div class="fg">
+      <div class="fg fg2">
+        <div class="ff"><label>Nome</label><input id="l-nome" type="text" placeholder="Nome completo"></div>
+        <div class="ff"><label>WhatsApp</label><input id="l-wpp" type="text" placeholder="(47) 9 0000-0000"></div>
+      </div>
+      <div class="fg fg2">
+        <div class="ff"><label>Origem</label><select id="l-origem"><option>Instagram</option><option>Indicação</option><option>TikTok</option><option>LinkedIn</option><option>Site</option><option>WhatsApp</option><option>Outro</option></select></div>
+        <div class="ff"><label>Temperatura</label><select id="l-temp"><option>Quente</option><option>Morno</option><option>Frio</option></select></div>
+      </div>
+      <div class="fg fg2">
+        <div class="ff"><label>Status</label><select id="l-status"><option>Novo</option><option>Em contato</option><option>Agendado</option><option>Proposta</option><option>Fechado</option><option>Perdido</option></select></div>
+        <div class="ff"><label>Data</label><input id="l-data" type="date"></div>
+      </div>
+      <div class="ff"><label>Interesse / imóvel</label><input id="l-interesse" type="text" placeholder="Ex: Apto 2 quartos em Piçarras"></div>
+      <div class="ff"><label>Próxima ação</label><input id="l-acao" type="text" placeholder="Ex: Ligar amanhã às 10h"></div>
+      <div class="ff"><label>Notas</label><textarea id="l-notas" placeholder="Observações sobre o lead..."></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOverlay('ov-lead')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveLead()">Salvar lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import CSV -->
+<div class="overlay" id="ov-import">
+  <div class="modal" style="width:600px">
+    <h3>Importar Leads via CSV</h3>
+    <div class="import-drop" onclick="document.getElementById('csv-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=''" ondrop="handleDrop(event)">
+      <div style="font-size:24px">📂</div>
+      <strong style="font-size:13px">Clique ou arraste o arquivo CSV</strong>
+      <p>Separado por vírgula ou ponto e vírgula</p>
+      <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleCSV(this.files[0])">
+    </div>
+    <div id="import-map" style="display:none;margin-top:20px">
+      <div id="import-preview" style="font-size:12px;color:var(--muted);background:var(--bg);padding:10px 14px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:16px"></div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr><th style="text-align:left;padding:6px 8px;font-size:11px;color:var(--muted)">Campo</th><th style="text-align:left;padding:6px 8px;font-size:11px;color:var(--muted)">Coluna do CSV</th></tr></thead>
+        <tbody id="col-map"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOverlay('ov-import');resetImport()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-import" style="display:none" onclick="doImport()">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pipeline -->
+<div class="overlay" id="ov-pipe">
+  <div class="modal">
+    <h3 id="pipe-modal-title">Novo Conteúdo</h3>
+    <input type="hidden" id="edit-pipe-id">
+    <div class="fg">
+      <div class="ff"><label>Título</label><input id="p-titulo" type="text" placeholder="Ex: Reels sobre valorização em Piçarras"></div>
+      <div class="fg fg2">
+        <div class="ff"><label>Formato</label><select id="p-formato"><option>Reels</option><option>Carrossel</option><option>Stories</option><option>Post estático</option><option>Vídeo longo</option><option>Podcast</option><option>Newsletter</option><option>Aula</option></select></div>
+        <div class="ff"><label>Plataforma</label><select id="p-plat"><option>Instagram</option><option>TikTok</option><option>LinkedIn</option><option>YouTube</option><option>Podcast</option><option>Newsletter</option></select></div>
+      </div>
+      <div class="fg fg2">
+        <div class="ff"><label>Etapa</label><select id="p-etapa"><option>Ideia</option><option>Copy</option><option>Produção</option><option>Edição</option><option>Publicado</option></select></div>
+        <div class="ff"><label>Prazo</label><input id="p-prazo" type="date"></div>
+      </div>
+      <div class="ff"><label>Responsável</label><input id="p-resp" type="text" placeholder="Quem executa"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOverlay('ov-pipe')">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePipe()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Metrics -->
+<div class="overlay" id="ov-met">
+  <div class="modal">
+    <h3>Registrar Métricas</h3>
+    <div class="fg">
+      <div class="ff"><label>Período (ex: Mai/2026)</label><input id="m-periodo" type="text"></div>
+      <div class="fg fg2">
+        <div class="ff"><label>Instagram HEAD</label><input id="m-igh" type="number" placeholder="0"></div>
+        <div class="ff"><label>Instagram Pessoal</label><input id="m-igp" type="number" placeholder="0"></div>
+      </div>
+      <div class="fg fg2">
+        <div class="ff"><label>LinkedIn</label><input id="m-li" type="number" placeholder="0"></div>
+        <div class="ff"><label>TikTok</label><input id="m-tt" type="number" placeholder="0"></div>
+      </div>
+      <div class="fg fg2">
+        <div class="ff"><label>YouTube</label><input id="m-yt" type="number" placeholder="0"></div>
+        <div class="ff"><label>Alcance médio</label><input id="m-alc" type="number" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOverlay('ov-met')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveMet()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Career -->
+<div class="overlay" id="ov-car">
+  <div class="modal">
+    <h3 id="car-modal-title">Novo Projeto</h3>
+    <input type="hidden" id="edit-car-id">
+    <div class="fg">
+      <div class="ff"><label>Nome do projeto</label><input id="c-nome" type="text" placeholder="Ex: Curso Marketing Imobiliário com IA"></div>
+      <div class="fg fg2">
+        <div class="ff"><label>Categoria</label><select id="c-cat"><option>Curso online</option><option>Mentoria</option><option>Comunidade</option><option>Conteúdo pago</option><option>Consultoria</option><option>Outro</option></select></div>
+        <div class="ff"><label>Status</label><select id="c-status"><option>Não iniciado</option><option>Em desenvolvimento</option><option>Lançado</option><option>Pausado</option></select></div>
+      </div>
+      <div class="fg fg2">
+        <div class="ff"><label>Receita estimada</label><input id="c-receita" type="text" placeholder="Ex: R$ 2.000/mês"></div>
+        <div class="ff"><label>Prazo</label><input id="c-prazo" type="text" placeholder="Ex: Set/2026"></div>
+      </div>
+      <div class="ff"><label>Próxima ação</label><input id="c-acao" type="text" placeholder="O que fazer agora"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOverlay('ov-car')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task -->
+<div class="overlay" id="ov-task">
+  <div class="modal">
+    <h3 id="task-modal-title">Nova Tarefa</h3>
+    <input type="hidden" id="edit-task-id">
+    <div class="fg">
+      <div class="ff"><label>Tarefa</label><input id="t-titulo" type="text" placeholder="Descreva a tarefa"></div>
+      <div class="fg fg2">
+        <div class="ff"><label>Prioridade</label><select id="t-prio"><option>Alta</option><option>Média</option><option>Baixa</option></select></div>
+        <div class="ff"><label>Área</label><select id="t-area"><option>HEAD IMOB</option><option>Pessoal</option><option>Carreira</option></select></div>
+      </div>
+      <div class="ff"><label>Prazo</label><input id="t-prazo" type="date"></div>
+      <div class="ff"><label>Notificar em</label><input id="t-notify" type="datetime-local" title="Receba uma notificação no celular neste horário"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOverlay('ov-task')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTask()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Note -->
+<div class="overlay" id="ov-note">
+  <div class="modal" style="width:600px">
+    <h3 id="note-modal-title">Nova Nota</h3>
+    <input type="hidden" id="edit-note-id">
+    <div class="fg">
+      <div class="ff"><label>Título</label><input id="n-titulo" type="text" placeholder="Título da nota"></div>
+      <div class="ff"><label>Conteúdo</label><textarea id="n-content" style="min-height:200px" placeholder="Escreva aqui..."></textarea></div>
+      <div class="ff"><label>Cor de fundo</label>
+        <div style="display:flex;gap:8px">
+          <div class="color-opt" style="width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid var(--border);cursor:pointer" onclick="selectColor('#ffffff',this)"></div>
+          <div class="color-opt" style="width:28px;height:28px;border-radius:50%;background:#fef9c3;border:2px solid transparent;cursor:pointer" onclick="selectColor('#fef9c3',this)"></div>
+          <div class="color-opt" style="width:28px;height:28px;border-radius:50%;background:#dcfce7;border:2px solid transparent;cursor:pointer" onclick="selectColor('#dcfce7',this)"></div>
+          <div class="color-opt" style="width:28px;height:28px;border-radius:50%;background:#dbeafe;border:2px solid transparent;cursor:pointer" onclick="selectColor('#dbeafe',this)"></div>
+          <div class="color-opt" style="width:28px;height:28px;border-radius:50%;background:#fce7f3;border:2px solid transparent;cursor:pointer" onclick="selectColor('#fce7f3',this)"></div>
+        </div>
+        <input type="hidden" id="n-color" value="#ffffff">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOverlay('ov-note')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNote()">Salvar nota</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cal add -->
+<div class="overlay" id="ov-cal">
+  <div class="modal">
+    <h3>Agendar Conteúdo</h3>
+    <div class="fg">
+      <div class="ff"><label>Título</label><input id="ca-titulo" type="text"></div>
+      <div class="fg fg2">
+        <div class="ff"><label>Plataforma</label><select id="ca-plat"><option>Instagram</option><option>TikTok</option><option>LinkedIn</option><option>YouTube</option><option>Podcast</option><option>Newsletter</option></select></div>
+        <div class="ff"><label>Formato</label><select id="ca-fmt"><option>Reels</option><option>Carrossel</option><option>Stories</option><option>Post estático</option><option>Vídeo</option><option>Episódio</option><option>Edição</option></select></div>
+      </div>
+      <div class="fg fg2">
+        <div class="ff"><label>Data</label><input id="ca-data" type="date"></div>
+        <div class="ff"><label>Status</label><select id="ca-status"><option>Planejado</option><option>Produção</option><option>Pronto</option><option>Publicado</option></select></div>
+      </div>
+      <div class="ff"><label>Notificar em</label><input id="ca-notify" type="datetime-local"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOverlay('ov-cal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCal()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://bywhpjlwyanredyiqwfl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_eKURyAiCEd75rkn1RuOCHQ_ddnnFTQk';
+const ADMIN_EMAIL = 'dudasants8@gmail.com';
+const VAPID_PUBLIC = '5s4b1h5jWXM1vQHhfhQQ1mzURG8TOR6neI1YtBpUC8YWpZdQKBD-m6P_cprB9xjj4dhFb0ORycdGZ3J1xzfUWw';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null, currentProfile = null, newsLoaded = false, currentTopic = 'imobiliario';
+let calOffset = 0, csvData = [], csvHeaders = [], selectedNoteColor = '#ffffff';
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = '/login.html'; return; }
+  currentUser = session.user;
+
+  // Load profile
+  const { data: prof } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  currentProfile = prof;
+
+  // Check subscription (admin is always active)
+  if (prof && prof.role !== 'admin' && prof.subscription_status !== 'active') {
+    showPaywall(); return;
+  }
+
+  // Apply theme
+  const theme = prof?.theme || localStorage.getItem('theme') || 'light';
+  setTheme(theme, false);
+
+  // Render avatar
+  renderAvatarHeader();
+  await renderCRM();
+  renderPipe();
+  renderCalendar();
+  renderMetrics();
+  renderCareer();
+  renderTasks();
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  }
+}
+
+function showPaywall() {
+  document.querySelector('nav').style.display = 'none';
+  document.querySelector('main').innerHTML = `
+    <div class="paywall">
+      <div style="font-size:36px;margin-bottom:16px">🔒</div>
+      <h2>Acesso Premium</h2>
+      <p>Para usar o HEAD MKT Dashboard você precisa de uma assinatura ativa.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="window.location.href='/index.html#pricing'" style="padding:12px 24px">Ver planos</button>
+        <button class="btn btn-primary" onclick="startCheckout('monthly')" style="padding:12px 24px">Assinar agora — R$80/mês</button>
+      </div>
+      <div style="margin-top:16px"><button class="btn btn-danger" onclick="doLogout()">Sair</button></div>
+    </div>`;
+}
+
+async function startCheckout(plan) {
+  window.location.href = `/api/create-checkout?plan=${plan}&user=${currentUser.id}&email=${encodeURIComponent(currentUser.email)}`;
+}
+
+// ─── AVATAR ────────────────────────────────────────────────────────────────
+function renderAvatarHeader() {
+  const container = document.getElementById('avatar-container');
+  const name = currentProfile?.name || currentUser?.email?.split('@')[0] || 'U';
+  if (currentProfile?.avatar_url) {
+    container.innerHTML = `<img src="${currentProfile.avatar_url}" class="avatar" alt="avatar" onclick="openSettings()">`;
+  } else {
+    container.innerHTML = `<div class="avatar-placeholder" onclick="openSettings()">${name[0].toUpperCase()}</div>`;
+  }
+}
+
+async function uploadAvatar(input) {
+  const file = input.files[0]; if (!file) return;
+  const ext = file.name.split('.').pop();
+  const path = `${currentUser.id}/avatar.${ext}`;
+  const { error } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
+  if (error) return alert('Erro ao fazer upload: ' + error.message);
+  const { data } = sb.storage.from('avatars').getPublicUrl(path);
+  await sb.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', currentUser.id);
+  currentProfile.avatar_url = data.publicUrl;
+  renderAvatarHeader();
+  renderSettingsAvatar();
+}
+
+// ─── SETTINGS ──────────────────────────────────────────────────────────────
+function openSettings() {
+  renderSettingsAvatar();
+  document.getElementById('settings-name-input').value = currentProfile?.name || '';
+  document.getElementById('settings-panel').classList.add('open');
+  document.getElementById('settings-overlay').style.display = 'block';
+  const theme = currentProfile?.theme || localStorage.getItem('theme') || 'light';
+  document.getElementById('theme-light').classList.toggle('active', theme==='light');
+  document.getElementById('theme-dark').classList.toggle('active', theme==='dark');
+}
+function closeSettings() {
+  document.getElementById('settings-panel').classList.remove('open');
+  document.getElementById('settings-overlay').style.display = 'none';
+}
+function renderSettingsAvatar() {
+  const el = document.getElementById('settings-avatar-display');
+  const name = currentProfile?.name || currentUser?.email?.split('@')[0] || 'U';
+  document.getElementById('settings-name').textContent = name;
+  document.getElementById('settings-email').textContent = currentUser?.email || '';
+  if (currentProfile?.avatar_url) {
+    el.innerHTML = `<img src="${currentProfile.avatar_url}" class="avatar-big" alt="avatar">`;
+  } else {
+    el.innerHTML = `<div class="avatar-big-placeholder">${name[0].toUpperCase()}</div>`;
+  }
+}
+async function updateName() {
+  const name = document.getElementById('settings-name-input').value.trim();
+  if (!name) return;
+  await sb.from('profiles').update({ name }).eq('id', currentUser.id);
+  currentProfile.name = name;
+  renderAvatarHeader();
+  renderSettingsAvatar();
+}
+async function setTheme(theme, save=true) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+  if (save && currentProfile) await sb.from('profiles').update({ theme }).eq('id', currentUser.id);
+  document.getElementById('theme-light')?.classList.toggle('active', theme==='light');
+  document.getElementById('theme-dark')?.classList.toggle('active', theme==='dark');
+}
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.href = '/login.html';
+}
+
+// ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
+async function requestNotifications() {
+  if (!('Notification' in window)) return alert('Seu navegador não suporta notificações.');
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') return alert('Notificações negadas. Habilite nas configurações do navegador.');
+  if ('serviceWorker' in navigator && 'PushManager' in window) {
+    const reg = await navigator.serviceWorker.ready;
+    try {
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC) });
+      await sb.from('push_subscriptions').upsert({ user_id: currentUser.id, subscription: sub }, { onConflict: 'user_id' });
+      document.getElementById('notif-btn').textContent = '🔔';
+      alert('Notificações ativadas!');
+    } catch(e) { alert('Erro ao ativar notificações: ' + e.message); }
+  } else {
+    new Notification('HEAD MKT', { body: 'Notificações ativadas!', icon: '/icons/icon-192.png' });
+  }
+}
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+// ─── NAVIGATION ────────────────────────────────────────────────────────────
+function showTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id==='noticias' && !newsLoaded) loadNews('imobiliario');
+  if(id==='carreira') { const txt=document.getElementById('car-notas-txt'); if(txt) txt.value=localStorage.getItem('car_notas')||''; }
+}
+function showSub(id, btn) {
+  const par = btn.closest('section');
+  par.querySelectorAll('.subtab').forEach(s=>s.classList.remove('active'));
+  par.querySelectorAll('.tabs2 button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='car-notas') document.getElementById('car-notas-txt').value=localStorage.getItem('car_notas')||'';
+}
+function openOverlay(id) { document.getElementById(id).classList.add('open'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')}));
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────
+const tempBadge = t => `<span class="badge ${{Quente:'br',Morno:'by',Frio:'bb'}[t]||'bz'}">${t}</span>`;
+const sBadge = s => `<span class="badge ${{Novo:'bb','Em contato':'by',Agendado:'bo',Proposta:'bo',Fechado:'bg',Perdido:'bz','Não iniciado':'bz','Em desenvolvimento':'by',Lançado:'bg',Pausado:'bz',Ideia:'bz',Copy:'bb',Produção:'by',Edição:'bo',Publicado:'bg',Planejado:'bb',Pronto:'bo'}[s]||'bz'}">${s}</span>`;
+const prioBadge = p => `<span class="badge ${{Alta:'br',Média:'by',Baixa:'bb'}[p]||'bz'}">${p}</span>`;
+const fmtDate = d => { if(!d) return '—'; const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`; };
+const fmt = n => Number(n||0).toLocaleString('pt-BR');
+
+// ─── CRM ───────────────────────────────────────────────────────────────────
+async function renderCRM() {
+  const { data: leads } = await sb.from('leads').select('*').eq('user_id', currentUser.id).order('created_at', {ascending:false});
+  let filtered = leads || [];
+  const fT=document.getElementById('f-temp')?.value, fS=document.getElementById('f-status')?.value, fQ=document.getElementById('f-search')?.value?.toLowerCase();
+  if(fT) filtered=filtered.filter(l=>l.temp===fT);
+  if(fS) filtered=filtered.filter(l=>l.status===fS);
+  if(fQ) filtered=filtered.filter(l=>l.nome?.toLowerCase().includes(fQ));
+  document.getElementById('crm-count').textContent=`${leads?.length||0} leads`;
+  const body=document.getElementById('crm-body'), empty=document.getElementById('crm-empty'), wrap=document.getElementById('crm-wrap');
+  if(!filtered.length){body.innerHTML='';empty.style.display='block';wrap.style.display='none';return;}
+  empty.style.display='none';wrap.style.display='block';
+  body.innerHTML=filtered.map(l=>`<tr>
+    <td><strong>${l.nome||'—'}</strong></td><td>${l.wpp||'—'}</td><td>${l.origem||'—'}</td>
+    <td>${l.interesse||'—'}</td><td>${tempBadge(l.temp)}</td><td>${sBadge(l.status)}</td>
+    <td>${l.acao||'—'}</td><td>${fmtDate(l.data)}</td>
+    <td style="white-space:nowrap">
+      <button class="btn-icon" onclick="editLead(${l.id})" title="Editar">✏️</button>
+      <button class="btn btn-danger" onclick="deleteLead(${l.id})">✕</button>
+    </td></tr>`).join('');
+}
+
+async function editLead(id) {
+  const {data:l}=await sb.from('leads').select('*').eq('id',id).single();
+  if(!l) return;
+  document.getElementById('lead-modal-title').textContent='Editar Lead';
+  document.getElementById('edit-lead-id').value=id;
+  document.getElementById('l-nome').value=l.nome||'';
+  document.getElementById('l-wpp').value=l.wpp||'';
+  document.getElementById('l-origem').value=l.origem||'Instagram';
+  document.getElementById('l-temp').value=l.temp||'Morno';
+  document.getElementById('l-status').value=l.status||'Novo';
+  document.getElementById('l-data').value=l.data||'';
+  document.getElementById('l-interesse').value=l.interesse||'';
+  document.getElementById('l-acao').value=l.acao||'';
+  document.getElementById('l-notas').value=l.notas||'';
+  openOverlay('ov-lead');
+}
+
+async function saveLead() {
+  const editId=document.getElementById('edit-lead-id').value;
+  const payload={
+    user_id:currentUser.id,nome:document.getElementById('l-nome').value||'Sem nome',
+    wpp:document.getElementById('l-wpp').value,origem:document.getElementById('l-origem').value,
+    temp:document.getElementById('l-temp').value,status:document.getElementById('l-status').value,
+    data:document.getElementById('l-data').value||null,interesse:document.getElementById('l-interesse').value,
+    acao:document.getElementById('l-acao').value,notas:document.getElementById('l-notas').value
+  };
+  if(editId) await sb.from('leads').update(payload).eq('id',editId);
+  else await sb.from('leads').insert(payload);
+  document.getElementById('edit-lead-id').value='';
+  document.getElementById('lead-modal-title').textContent='Novo Lead';
+  closeOverlay('ov-lead');
+  ['l-nome','l-wpp','l-interesse','l-acao','l-notas'].forEach(id=>document.getElementById(id).value='');
+  renderCRM();
+}
+
+async function deleteLead(id) {
+  if(!confirm('Remover este lead?')) return;
+  await sb.from('leads').delete().eq('id',id);
+  renderCRM();
+}
+
+async function exportLeads() {
+  const {data:leads}=await sb.from('leads').select('*').eq('user_id',currentUser.id);
+  if(!leads?.length) return alert('Nenhum lead para exportar.');
+  const hdr=['Nome','WhatsApp','Origem','Interesse','Temperatura','Status','Proxima acao','Data','Notas'];
+  const rows=leads.map(l=>[l.nome,l.wpp,l.origem,l.interesse,l.temp,l.status,l.acao,l.data,l.notas].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv=[hdr.join(','),...rows].join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);a.download='leads_head_mkt.csv';a.click();
+}
+
+// CSV Import
+let csvParsed=[];
+function handleDrop(e){e.preventDefault();handleCSV(e.dataTransfer.files[0]);}
+function handleCSV(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const sep=e.target.result.includes(';')?';':',';
+    const lines=e.target.result.trim().split(/\r?\n/);
+    csvHeaders=lines[0].split(sep).map(h=>h.replace(/^"|"$/g,'').trim());
+    csvParsed=lines.slice(1).map(line=>{
+      const vals=[];let cur='',inQ=false;
+      for(const c of line){if(c==='"'){inQ=!inQ;continue;}if(c===sep&&!inQ){vals.push(cur.trim());cur='';}else cur+=c;}
+      vals.push(cur.trim());
+      return csvHeaders.reduce((o,h,i)=>{o[h]=vals[i]||'';return o;},{});
+    });
+    const fields=[{k:'nome',l:'Nome'},{k:'wpp',l:'WhatsApp'},{k:'origem',l:'Origem'},{k:'interesse',l:'Interesse'},{k:'temp',l:'Temperatura'},{k:'status',l:'Status'},{k:'acao',l:'Próxima ação'},{k:'data',l:'Data'}];
+    document.getElementById('import-preview').innerHTML=`<strong>${csvParsed.length} registros</strong> · Colunas: ${csvHeaders.join(', ')}`;
+    document.getElementById('col-map').innerHTML=fields.map(f=>{
+      const best=csvHeaders.find(h=>h.toLowerCase().includes(f.k)||h.toLowerCase().includes(f.l.toLowerCase()))||'';
+      return `<tr><td style="padding:5px 8px;font-size:13px;font-weight:600">${f.l}</td><td style="padding:5px 8px"><select id="map-${f.k}" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg)"><option value="">— ignorar —</option>${csvHeaders.map(h=>`<option value="${h}"${h===best?' selected':''}>${h}</option>`).join('')}</select></td></tr>`;
+    }).join('');
+    document.getElementById('import-map').style.display='block';
+    document.getElementById('btn-import').style.display='inline-flex';
+  };
+  reader.readAsText(file,'UTF-8');
+}
+async function doImport(){
+  const fields=['nome','wpp','origem','interesse','temp','status','acao','data'];
+  const mapping={};fields.forEach(k=>{mapping[k]=document.getElementById('map-'+k)?.value||'';});
+  const rows=csvParsed.map(row=>{
+    const l={user_id:currentUser.id,nome:'Sem nome',wpp:'',origem:'Importado',temp:'Morno',status:'Novo'};
+    fields.forEach(k=>{if(mapping[k]&&row[mapping[k]]!==undefined)l[k]=row[mapping[k]]||l[k];});
+    return l;
+  });
+  if(rows.length){await sb.from('leads').insert(rows);}
+  closeOverlay('ov-import');resetImport();
+  alert(`${rows.length} lead${rows.length!==1?'s':''} importado${rows.length!==1?'s':''}.`);
+  renderCRM();
+}
+function resetImport(){csvParsed=[];csvHeaders=[];document.getElementById('import-map').style.display='none';document.getElementById('btn-import').style.display='none';document.getElementById('csv-input').value='';}
+
+// ─── PIPELINE ──────────────────────────────────────────────────────────────
+async function renderPipe(){
+  const {data:all}=await sb.from('pipeline').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  let items=all||[];
+  const fE=document.getElementById('f-etapa')?.value,fP=document.getElementById('f-plat')?.value;
+  if(fE)items=items.filter(p=>p.etapa===fE);
+  if(fP)items=items.filter(p=>p.plataforma===fP);
+  const etapas=['Ideia','Copy','Produção','Edição','Publicado'];
+  document.getElementById('pipe-stages').innerHTML=etapas.map(e=>`<div class="pipe-stage"><div class="ps-label">${e}</div><div class="ps-count">${(all||[]).filter(p=>p.etapa===e).length}</div></div>`).join('');
+  document.getElementById('pipe-count').textContent=`${all?.length||0} conteúdos`;
+  const body=document.getElementById('pipe-body'),empty=document.getElementById('pipe-empty');
+  if(!items.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  body.innerHTML=items.map(p=>`<tr><td><strong>${p.titulo}</strong></td><td>${p.formato}</td><td>${p.plataforma}</td><td>${sBadge(p.etapa)}</td><td>${p.resp||'—'}</td><td>${fmtDate(p.prazo)}</td>
+    <td style="white-space:nowrap"><button class="btn-icon" onclick="editPipe(${p.id})">✏️</button><button class="btn btn-danger" onclick="deletePipe(${p.id})">✕</button></td></tr>`).join('');
+}
+async function editPipe(id){
+  const {data:p}=await sb.from('pipeline').select('*').eq('id',id).single();
+  if(!p)return;
+  document.getElementById('pipe-modal-title').textContent='Editar Conteúdo';
+  document.getElementById('edit-pipe-id').value=id;
+  document.getElementById('p-titulo').value=p.titulo||'';
+  document.getElementById('p-formato').value=p.formato||'Reels';
+  document.getElementById('p-plat').value=p.plataforma||'Instagram';
+  document.getElementById('p-etapa').value=p.etapa||'Ideia';
+  document.getElementById('p-prazo').value=p.prazo||'';
+  document.getElementById('p-resp').value=p.resp||'';
+  openOverlay('ov-pipe');
+}
+async function savePipe(){
+  const editId=document.getElementById('edit-pipe-id').value;
+  const payload={user_id:currentUser.id,titulo:document.getElementById('p-titulo').value||'Sem título',formato:document.getElementById('p-formato').value,plataforma:document.getElementById('p-plat').value,etapa:document.getElementById('p-etapa').value,prazo:document.getElementById('p-prazo').value||null,resp:document.getElementById('p-resp').value};
+  if(editId)await sb.from('pipeline').update(payload).eq('id',editId);
+  else await sb.from('pipeline').insert(payload);
+  document.getElementById('edit-pipe-id').value='';document.getElementById('pipe-modal-title').textContent='Novo Conteúdo';
+  closeOverlay('ov-pipe');document.getElementById('p-titulo').value='';document.getElementById('p-resp').value='';
+  renderPipe();
+}
+async function deletePipe(id){if(!confirm('Remover?'))return;await sb.from('pipeline').delete().eq('id',id);renderPipe();}
+
+// ─── CALENDAR ──────────────────────────────────────────────────────────────
+function getWeekDates(offset){
+  const now=new Date(),day=now.getDay(),mon=new Date(now);
+  mon.setDate(now.getDate()-(day===0?6:day-1)+offset*7);
+  return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
+}
+function changeWeek(dir){calOffset=dir===0?0:calOffset+dir;renderCalendar();}
+function toISO(d){return d.toISOString().split('T')[0];}
+function openCalModal(ds){document.getElementById('ca-data').value=ds;document.getElementById('ca-titulo').value='';openOverlay('ov-cal');}
+
+async function renderCalendar(){
+  const dates=getWeekDates(calOffset);
+  const days=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const plats=['Instagram','TikTok','LinkedIn','YouTube','Podcast','Newsletter'];
+  const {data:items}=await sb.from('calendar_items').select('*').eq('user_id',currentUser.id);
+  const all=items||[];
+  const s=dates[0],e=dates[6];
+  document.getElementById('cal-label').textContent=`${s.getDate()}/${s.getMonth()+1} – ${e.getDate()}/${e.getMonth()+1}/${e.getFullYear()}`;
+  const today=toISO(new Date());
+  let grid=`<div class="cal-week"><div class="cal-cell hdr"></div>`;
+  dates.forEach((d,i)=>{const ds=toISO(d);grid+=`<div class="cal-cell hdr" style="${ds===today?'background:var(--al);font-weight:800;color:var(--text)':''}">${days[i]}<br>${d.getDate()}/${d.getMonth()+1}</div>`;});
+  plats.forEach(plat=>{
+    grid+=`<div class="cal-cell" style="min-height:auto"><div class="cal-plat">${plat}</div></div>`;
+    dates.forEach(d=>{
+      const ds=toISO(d),dayItems=all.filter(c=>c.data===ds&&c.plat===plat);
+      grid+=`<div class="cal-cell">`;
+      dayItems.forEach(c=>{grid+=`<div class="cal-item" title="${c.fmt}">${c.titulo}</div>`;});
+      grid+=`<button class="cal-add" onclick="openCalModal('${ds}')">+</button></div>`;
+    });
+  });
+  grid+=`</div>`;
+  document.getElementById('cal-grid').innerHTML=grid;
+  const weekDs=dates.map(d=>toISO(d));
+  const wItems=all.filter(c=>weekDs.includes(c.data)).sort((a,b)=>a.data.localeCompare(b.data));
+  const list=document.getElementById('cal-list'),empty=document.getElementById('cal-empty');
+  if(!wItems.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=wItems.map(c=>`<tr><td><strong>${c.titulo}</strong></td><td>${c.plat}</td><td>${c.fmt}</td><td>${fmtDate(c.data)}</td><td>${sBadge(c.status)}</td>
+    <td><button class="btn btn-danger" onclick="deleteCal(${c.id})">✕</button></td></tr>`).join('');
+}
+async function saveCal(){
+  await sb.from('calendar_items').insert({user_id:currentUser.id,titulo:document.getElementById('ca-titulo').value||'Sem título',plat:document.getElementById('ca-plat').value,fmt:document.getElementById('ca-fmt').value,data:document.getElementById('ca-data').value||null,status:document.getElementById('ca-status').value,notify_at:document.getElementById('ca-notify').value||null});
+  closeOverlay('ov-cal');renderCalendar();
+}
+async function deleteCal(id){await sb.from('calendar_items').delete().eq('id',id);renderCalendar();}
+
+// ─── METRICS ───────────────────────────────────────────────────────────────
+async function renderMetrics(){
+  const {data:recs}=await sb.from('metrics').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  const all=recs||[];
+  const empty=document.getElementById('met-empty'),cards=document.getElementById('met-cards'),body=document.getElementById('met-body');
+  if(!all.length){cards.innerHTML='';body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const l=all[0];
+  document.getElementById('met-period').textContent='Último: '+l.periodo;
+  cards.innerHTML=[{label:'Instagram HEAD',val:l.ig_head},{label:'Instagram Pessoal',val:l.ig_pes},{label:'LinkedIn',val:l.li},{label:'TikTok',val:l.tt},{label:'YouTube',val:l.yt},{label:'Alcance médio',val:l.alcance}]
+    .map(c=>`<div class="met-card"><div class="met-label">${c.label}</div><div class="met-val">${fmt(c.val)}</div><div class="met-sub">${l.periodo}</div></div>`).join('');
+  body.innerHTML=all.map(r=>`<tr><td><strong>${r.periodo}</strong></td><td>${fmt(r.ig_head)}</td><td>${fmt(r.ig_pes)}</td><td>${fmt(r.li)}</td><td>${fmt(r.tt)}</td><td>${fmt(r.yt)}</td><td>${fmt(r.alcance)}</td>
+    <td><button class="btn btn-danger" onclick="deleteMet(${r.id})">✕</button></td></tr>`).join('');
+}
+async function saveMet(){
+  await sb.from('metrics').insert({user_id:currentUser.id,periodo:document.getElementById('m-periodo').value,ig_head:document.getElementById('m-igh').value||0,ig_pes:document.getElementById('m-igp').value||0,li:document.getElementById('m-li').value||0,tt:document.getElementById('m-tt').value||0,yt:document.getElementById('m-yt').value||0,alcance:document.getElementById('m-alc').value||0});
+  closeOverlay('ov-met');['m-periodo','m-igh','m-igp','m-li','m-tt','m-yt','m-alc'].forEach(id=>document.getElementById(id).value='');renderMetrics();
+}
+async function deleteMet(id){await sb.from('metrics').delete().eq('id',id);renderMetrics();}
+
+// ─── CAREER ────────────────────────────────────────────────────────────────
+async function renderCareer(){
+  const {data:items}=await sb.from('career_projects').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  const all=items||[];
+  const body=document.getElementById('car-body'),empty=document.getElementById('car-empty');
+  if(!all.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  body.innerHTML=all.map(c=>`<tr><td><strong>${c.nome}</strong></td><td>${c.cat}</td><td>${c.receita||'—'}</td><td>${sBadge(c.status)}</td><td>${c.acao||'—'}</td><td>${c.prazo||'—'}</td>
+    <td style="white-space:nowrap"><button class="btn-icon" onclick="editCar(${c.id})">✏️</button><button class="btn btn-danger" onclick="deleteCar(${c.id})">✕</button></td></tr>`).join('');
+}
+async function editCar(id){
+  const {data:c}=await sb.from('career_projects').select('*').eq('id',id).single();
+  if(!c)return;
+  document.getElementById('car-modal-title').textContent='Editar Projeto';
+  document.getElementById('edit-car-id').value=id;
+  document.getElementById('c-nome').value=c.nome||'';document.getElementById('c-cat').value=c.cat||'Curso online';
+  document.getElementById('c-status').value=c.status||'Não iniciado';document.getElementById('c-receita').value=c.receita||'';
+  document.getElementById('c-prazo').value=c.prazo||'';document.getElementById('c-acao').value=c.acao||'';
+  openOverlay('ov-car');
+}
+async function saveCar(){
+  const editId=document.getElementById('edit-car-id').value;
+  const payload={user_id:currentUser.id,nome:document.getElementById('c-nome').value||'Sem nome',cat:document.getElementById('c-cat').value,status:document.getElementById('c-status').value,receita:document.getElementById('c-receita').value,prazo:document.getElementById('c-prazo').value,acao:document.getElementById('c-acao').value};
+  if(editId)await sb.from('career_projects').update(payload).eq('id',editId);
+  else await sb.from('career_projects').insert(payload);
+  document.getElementById('edit-car-id').value='';document.getElementById('car-modal-title').textContent='Novo Projeto';
+  closeOverlay('ov-car');renderCareer();
+}
+async function deleteCar(id){if(!confirm('Remover?'))return;await sb.from('career_projects').delete().eq('id',id);renderCareer();}
+function saveCarNotes(){localStorage.setItem('car_notas',document.getElementById('car-notas-txt').value);const btn=event.target;btn.textContent='Salvo!';setTimeout(()=>btn.textContent='Salvar notas',1500);}
+
+// ─── TASKS ─────────────────────────────────────────────────────────────────
+async function renderTasks(){
+  const {data:all}=await sb.from('tasks').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  let pending=(all||[]).filter(t=>!t.done), done=(all||[]).filter(t=>t.done);
+  const fP=document.getElementById('f-prio')?.value,fA=document.getElementById('f-area')?.value;
+  if(fP)pending=pending.filter(t=>t.prio===fP);if(fA)pending=pending.filter(t=>t.area===fA);
+  document.getElementById('task-count').textContent=`${(all||[]).filter(t=>!t.done).length} pendentes`;
+  const lEl=document.getElementById('task-list'),eEl=document.getElementById('task-empty');
+  const dEl=document.getElementById('done-list'),deEl=document.getElementById('done-empty');
+  const taskRow=t=>`<div class="task-item"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})"><div class="task-content"><div class="task-title ${t.done?'done':''}">${t.titulo}</div><div class="task-meta">${prioBadge(t.prio)} ${t.area}${t.prazo?' · '+fmtDate(t.prazo):''}</div></div><div style="display:flex;gap:4px;flex-shrink:0">${!t.done?`<button class="btn-icon" onclick="editTask(${t.id})">✏️</button>`:''}<button class="btn btn-danger" onclick="deleteTask(${t.id})">✕</button></div></div>`;
+  if(!pending.length){lEl.innerHTML='';eEl.style.display='block';}else{eEl.style.display='none';lEl.innerHTML=pending.map(taskRow).join('');}
+  if(!done.length){dEl.innerHTML='';deEl.style.display='block';}else{deEl.style.display='none';dEl.innerHTML=done.map(taskRow).join('');}
+}
+async function editTask(id){
+  const {data:t}=await sb.from('tasks').select('*').eq('id',id).single();
+  if(!t)return;
+  document.getElementById('task-modal-title').textContent='Editar Tarefa';
+  document.getElementById('edit-task-id').value=id;
+  document.getElementById('t-titulo').value=t.titulo||'';document.getElementById('t-prio').value=t.prio||'Média';
+  document.getElementById('t-area').value=t.area||'HEAD IMOB';document.getElementById('t-prazo').value=t.prazo||'';
+  document.getElementById('t-notify').value=t.notify_at?t.notify_at.slice(0,16):'';
+  openOverlay('ov-task');
+}
+async function saveTask(){
+  const editId=document.getElementById('edit-task-id').value;
+  const payload={user_id:currentUser.id,titulo:document.getElementById('t-titulo').value||'Sem título',prio:document.getElementById('t-prio').value,area:document.getElementById('t-area').value,prazo:document.getElementById('t-prazo').value||null,notify_at:document.getElementById('t-notify').value||null,done:false};
+  if(editId)await sb.from('tasks').update(payload).eq('id',editId);
+  else await sb.from('tasks').insert(payload);
+  document.getElementById('edit-task-id').value='';document.getElementById('task-modal-title').textContent='Nova Tarefa';
+  closeOverlay('ov-task');document.getElementById('t-titulo').value='';renderTasks();
+}
+async function toggleTask(id){
+  const {data:t}=await sb.from('tasks').select('done').eq('id',id).single();
+  await sb.from('tasks').update({done:!t.done}).eq('id',id);renderTasks();
+}
+async function deleteTask(id){await sb.from('tasks').delete().eq('id',id);renderTasks();}
+async function clearDone(){if(!confirm('Remover todas as concluídas?'))return;await sb.from('tasks').delete().eq('user_id',currentUser.id).eq('done',true);renderTasks();}
+
+// ─── NOTES ─────────────────────────────────────────────────────────────────
+function selectColor(color, el){
+  selectedNoteColor=color;
+  document.querySelectorAll('.color-opt').forEach(c=>c.style.border='2px solid transparent');
+  el.style.border='2px solid var(--accent)';
+  document.getElementById('n-color').value=color;
+}
+async function renderNotes(){
+  const {data:notes}=await sb.from('notes').select('*').eq('user_id',currentUser.id).order('pinned',{ascending:false}).order('updated_at',{ascending:false});
+  const all=notes||[];
+  const grid=document.getElementById('notes-grid'),empty=document.getElementById('notes-empty');
+  if(!all.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=all.map(n=>`<div class="note-card ${n.pinned?'pinned':''}" style="background:${n.color||'#fff'}" onclick="editNote(${n.id})">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div class="note-title">${n.title||'Sem título'}</div>
+      <div onclick="event.stopPropagation()" style="display:flex;gap:4px">
+        <button class="btn-icon" onclick="togglePin(${n.id},${n.pinned})" title="${n.pinned?'Desafixar':'Fixar'}">${n.pinned?'📌':'📍'}</button>
+        <button class="btn btn-danger" onclick="deleteNote(${n.id})">✕</button>
+      </div>
+    </div>
+    <div class="note-preview">${n.content||''}</div>
+    <div class="note-date">${new Date(n.updated_at).toLocaleDateString('pt-BR')}</div>
+  </div>`).join('');
+}
+async function editNote(id){
+  const {data:n}=await sb.from('notes').select('*').eq('id',id).single();
+  if(!n)return;
+  document.getElementById('note-modal-title').textContent='Editar Nota';
+  document.getElementById('edit-note-id').value=id;
+  document.getElementById('n-titulo').value=n.title||'';
+  document.getElementById('n-content').value=n.content||'';
+  document.getElementById('n-color').value=n.color||'#ffffff';
+  selectedNoteColor=n.color||'#ffffff';
+  openOverlay('ov-note');
+}
+async function saveNote(){
+  const editId=document.getElementById('edit-note-id').value;
+  const payload={user_id:currentUser.id,title:document.getElementById('n-titulo').value||'Sem título',content:document.getElementById('n-content').value,color:document.getElementById('n-color').value||'#ffffff',updated_at:new Date().toISOString()};
+  if(editId)await sb.from('notes').update(payload).eq('id',editId);
+  else await sb.from('notes').insert(payload);
+  document.getElementById('edit-note-id').value='';document.getElementById('note-modal-title').textContent='Nova Nota';
+  closeOverlay('ov-note');document.getElementById('n-titulo').value='';document.getElementById('n-content').value='';
+  renderNotes();
+}
+async function togglePin(id,pinned){await sb.from('notes').update({pinned:!pinned}).eq('id',id);renderNotes();}
+async function deleteNote(id){if(!confirm('Remover nota?'))return;await sb.from('notes').delete().eq('id',id);renderNotes();}
+
+// ─── NEWS ──────────────────────────────────────────────────────────────────
+const TOPICS={imobiliario:{q:'mercado+imobiliario+brasil+imoveis'},tecnologia:{q:'tecnologia+inovacao+brasil+2025'},inovacao:{q:'inovacao+startups+brasil+tendencias'},wellness:{q:'wellness+bem+estar+saude+lifestyle+brasil'},'nova-geracao':{q:'geracao+z+millennials+comportamento+brasil'},'ia-marketing':{q:'inteligencia+artificial+marketing+conteudo+2025'}};
+function switchNews(topic,btn){document.querySelectorAll('.ntb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentTopic=topic;loadNews(topic);}
+async function loadNews(topic){
+  newsLoaded=true;currentTopic=topic;
+  const c=document.getElementById('news-container'),meta=document.getElementById('news-meta');
+  c.innerHTML='<div class="loading">Carregando...</div>';
+  const rss=`https://news.google.com/rss/search?q=${TOPICS[topic].q}&hl=pt-BR&gl=BR&ceid=BR:pt`;
+  try{
+    const res=await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rss)}&count=12`);
+    const data=await res.json();
+    if(!data.items?.length)throw new Error('sem dados');
+    meta.textContent=`Atualizado às ${new Date().getHours()}:${String(new Date().getMinutes()).padStart(2,'0')}`;
+    c.innerHTML=`<div class="news-grid">${data.items.map(item=>{
+      const pub=item.pubDate?new Date(item.pubDate):null;
+      const src=item.source?.name||(item.link?new URL(item.link).hostname.replace('www.',''):'');
+      const desc=item.description?item.description.replace(/<[^>]+>/g,'').slice(0,140)+'…':'';
+      return `<div class="news-card"><div class="news-source">${src}</div><a class="news-title" href="${item.link}" target="_blank" rel="noopener">${item.title}</a>${desc?`<div class="news-desc">${desc}</div>`:''}<div class="news-date">${pub?pub.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}):''}</div></div>`;
+    }).join('')}</div>`;
+  }catch{
+    c.innerHTML=`<div class="empty-state">Não foi possível carregar automaticamente.<br><br><a href="https://news.google.com/search?q=${TOPICS[topic].q}&hl=pt-BR" target="_blank" style="color:var(--blue)">Abrir Google News →</a></div>`;
+  }
+}
+
+// Override showTab to also load notes
+const origShowTab=showTab;
+window.showTab=function(id,btn){
+  origShowTab(id,btn);
+  if(id==='notas')renderNotes();
+};
+
+// ─── START ─────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
